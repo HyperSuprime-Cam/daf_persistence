@@ -276,6 +276,15 @@ class Butler(object):
                                       pexLog.BlockTimingLog.INSTRUM+1)
         trace.setUsageFlags(trace.ALLUDATA)
 
+        # get the pipe version to stick in the header/metadata
+        pipeVersion = "unknown"
+        try:
+            import hsc.pipe.tasks.version as hptv
+            pipeVersion = hptv.__version__
+        except ImportError, e:
+            # Don't fail if hscPipe isn't set up.
+            pass
+
         if storageName == "PickleStorage":
             trace.start("write to %s(%s)" % (storageName, logLoc.locString()))
             outDir = os.path.dirname(logLoc.locString())
@@ -316,7 +325,13 @@ class Butler(object):
                     if e.errno != 17:
                         raise e
             flags = additionalData.getInt("flags", 0)
+            haveMeta = hasattr(obj, 'getMetadata')
+            if haveMeta:
+                md = obj.getMetadata()
+                md.add("HSCPIPE_VERSION", pipeVersion)
             obj.writeFits(logLoc.locString(), flags=flags)
+            if haveMeta:
+                md.remove("HSCPIPE_VERSION") # don't pollute
             trace.done()
             return
 
@@ -325,6 +340,15 @@ class Butler(object):
         storage = self.persistence.getPersistStorage(storageName, logLoc)
         storageList.append(storage)
         trace.start("write to %s(%s)" % (storageName, logLoc.locString()))
+
+
+        if storageName == 'FitsStorage':
+            md = obj.getMetadata()
+            md.add("HSCPIPE_VERSION", pipeVersion)
+            self.persistence.persist(obj, storageList, additionalData)
+            md.remove("HSCPIPE_VERSION") # don't pollute
+            trace.done()
+            return
 
         # Persist the item.
         if hasattr(obj, '__deref__'):
