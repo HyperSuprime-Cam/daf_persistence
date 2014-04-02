@@ -190,7 +190,7 @@ class Butler(object):
         location = self.mapper.map(datasetType, dataId)
         additionalData = location.getAdditionalData()
         storageName = location.getStorageName()
-        if storageName in ('BoostStorage', 'FitsStorage', 'PafStorage',
+        if storageName in ('BoostStorage', 'FitsStorage', 'PafStorage', 'EupsStorage',
                 'PickleStorage', 'ConfigStorage', 'FitsCatalogStorage'):
             locations = location.getLocations()
             for locationString in locations:
