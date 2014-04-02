@@ -30,6 +30,8 @@ from __future__ import with_statement
 import cPickle
 import importlib
 import os
+import re
+import commands
 import lsst.pex.config as pexConfig
 import lsst.pex.logging as pexLog
 import lsst.pex.policy as pexPolicy
@@ -311,6 +313,49 @@ class Butler(object):
                     if e.errno != 17:
                         raise e
             obj.save(logLoc.locString())
+            trace.done()
+            return
+
+        if storageName == 'EupsStorage':
+            trace.start("write to %s(%s)" % (storageName, logLoc.locString()))
+
+            # get any versions which are currently setup
+            pipeSetups    = {}
+            import eups
+            eupsObj = eups.Eups()
+            for p in eupsObj.findProducts(tags=["setup"]):
+                gitinfo = ""
+                gitdir = os.path.join(p.dir, ".git")
+                pdir = p.dir
+                if re.search("LOCAL", p.version) and os.path.exists(gitdir):
+                    # if it's local, p.dir is in the p.version string
+                    pdir = ""
+                    # get the git revision and an indication if the working copy is clean
+                    try:
+                        gitrevCmd = "git --git-dir %s --work-tree %s rev-parse HEAD"%(gitdir, p.dir)
+                        _stat, gitrev = commands.getstatusoutput(gitrevCmd)
+                        if not _stat:
+                            gitinfo += " rev:" + gitrev[0:8]
+                        gitdifCmd = "git --git-dir %s --work-tree %s diff --shortstat"%(gitdir, p.dir)
+                        _stat, clean = commands.getstatusoutput(gitdifCmd)
+                        if not _stat:
+                            if len(clean.strip()) == 0:
+                                clean = "clean-working-copy"
+                            gitinfo += " " + clean
+                    # move on quietly if something goes wrong
+                    except:
+                        gitinfo = "no-git-info"
+                        pass
+
+                pipeSetups[p.name] = p.version, pdir + gitinfo
+
+            # write it
+            versionFile = logLoc.locString()
+            with open(versionFile, 'w') as fp:
+                for k,v in pipeSetups.iteritems():
+                    if k and v:
+                        vers, otherinfo = v
+                        fp.write("%-30s %-16s %s\n" % (k, vers, otherinfo))
             trace.done()
             return
 
