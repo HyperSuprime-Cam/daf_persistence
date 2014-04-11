@@ -352,7 +352,7 @@ class Butler(object):
             # write it
             versionFile = logLoc.locString()
             with open(versionFile, 'w') as fp:
-                for k,v in pipeSetups.iteritems():
+                for k,v in sorted(pipeSetups.iteritems()):
                     if k and v:
                         vers, otherinfo = v
                         fp.write("%-30s %-16s %s\n" % (k, vers, otherinfo))
