@@ -403,7 +403,7 @@ class Butler(object):
             md.remove("USER")
             md.remove("ROOT_PATH")
             for calibName in 'bias', 'dark', 'flat', 'fringe':
-                for t in "_VERSION", "_DATE":
+                for t in "_VERSION", "_DATE", "_PATH":
                     key = calibName.upper()+t
                     if md.exists(key):
                         md.remove(key)
