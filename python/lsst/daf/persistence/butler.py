@@ -32,6 +32,8 @@ import importlib
 import os
 import re
 import commands
+import socket
+import getpass
 import lsst.pex.config as pexConfig
 import lsst.pex.logging as pexLog
 import lsst.pex.policy as pexPolicy
@@ -278,15 +280,6 @@ class Butler(object):
                                       pexLog.BlockTimingLog.INSTRUM+1)
         trace.setUsageFlags(trace.ALLUDATA)
 
-        # get the pipe version to stick in the header/metadata
-        pipeVersion = "unknown"
-        try:
-            import hsc.pipe.tasks.version as hptv
-            pipeVersion = hptv.__version__
-        except ImportError, e:
-            # Don't fail if hscPipe isn't set up.
-            pass
-
         if storageName == "PickleStorage":
             trace.start("write to %s(%s)" % (storageName, logLoc.locString()))
             outDir = os.path.dirname(logLoc.locString())
@@ -370,13 +363,9 @@ class Butler(object):
                     if e.errno != 17:
                         raise e
             flags = additionalData.getInt("flags", 0)
-            haveMeta = hasattr(obj, 'getMetadata')
-            if haveMeta:
-                md = obj.getMetadata()
-                md.add("HSCPIPE_VERSION", pipeVersion)
+            self._addMetadata(obj, dataId)
             obj.writeFits(logLoc.locString(), flags=flags)
-            if haveMeta:
-                md.remove("HSCPIPE_VERSION") # don't pollute
+            self._removeMetadata(obj)
             trace.done()
             return
 
@@ -388,10 +377,9 @@ class Butler(object):
 
 
         if storageName == 'FitsStorage':
-            md = obj.getMetadata()
-            md.add("HSCPIPE_VERSION", pipeVersion)
+            self._addMetadata(obj, dataId)
             self.persistence.persist(obj, storageList, additionalData)
-            md.remove("HSCPIPE_VERSION") # don't pollute
+            self._removeMetadata(obj)
             trace.done()
             return
 
@@ -403,6 +391,57 @@ class Butler(object):
         else:
             self.persistence.persist(obj, storageList, additionalData)
         trace.done()
+
+    def _removeMetadata(self, obj):
+        haveMeta = hasattr(obj, "getMetadata")
+        if not haveMeta or obj.getMetadata() is None:
+            return
+        else:
+            md = obj.getMetadata()
+            md.remove("HSCPIPE_VERSION")
+            md.remove("HOST")
+            md.remove("USER")
+            md.remove("ROOT_PATH")
+            for calibName in 'bias', 'dark', 'flat', 'fringe':
+                for t in "_VERSION", "_DATE":
+                    key = calibName.upper()+t
+                    if md.exists(key):
+                        md.remove(key)
+
+    def _addMetadata(self, obj, dataId):
+
+        haveMeta = hasattr(obj, 'getMetadata')
+        if not haveMeta or obj.getMetadata() is None:
+            return
+        md = obj.getMetadata()
+
+        # get the pipe version to stick in the header/metadata
+        pipeVersion = "unknown"
+        try:
+            import hsc.pipe.tasks.version as hptv
+            pipeVersion = hptv.__version__
+        except ImportError, e:
+            # Don't fail if hscPipe isn't set up.
+            pass
+        md.add("HSCPIPE_VERSION", pipeVersion)
+        md.add("HOST", socket.gethostname())
+        md.add("USER", getpass.getuser())
+        md.add("ROOT_PATH", self.mapper.root)
+
+        calibInfo = dict()
+        for calibName in 'bias', 'dark', 'flat', 'fringe':
+
+            calibPath, calibVersion, calibDate = "not_available", "not_available", "not_available"
+            try:
+                calibPath      = self.get(calibName+"_filename", dataId)
+                additionalData = self.mapper.map(calibName, dataId).getAdditionalData()
+                calibVersion   = additionalData.get('calibVersion')
+                calibDate      = additionalData.get('calibDate')
+            except:
+                pass
+            md.add(calibName.upper()+"_VERSION", calibVersion)
+            md.add(calibName.upper()+"_DATE", calibDate)
+            md.add(calibName.upper()+"_PATH", calibPath)
 
     def subset(self, datasetType, level=None, dataId={}, **rest):
         """Extracts a subset of a dataset collection.
