@@ -402,11 +402,6 @@ class Butler(object):
             md.remove("HOST")
             md.remove("USER")
             md.remove("ROOT_PATH")
-            for calibName in 'bias', 'dark', 'flat', 'fringe':
-                for t in "_VERSION", "_DATE", "_PATH":
-                    key = calibName.upper()+t
-                    if md.exists(key):
-                        md.remove(key)
 
     def _addMetadata(self, obj, dataId):
 
@@ -427,21 +422,6 @@ class Butler(object):
         md.add("HOST", socket.gethostname())
         md.add("USER", getpass.getuser())
         md.add("ROOT_PATH", self.mapper.root)
-
-        calibInfo = dict()
-        for calibName in 'bias', 'dark', 'flat', 'fringe':
-
-            calibPath, calibVersion, calibDate = "not_available", "not_available", "not_available"
-            try:
-                calibPath      = self.get(calibName+"_filename", dataId)
-                additionalData = self.mapper.map(calibName, dataId).getAdditionalData()
-                calibVersion   = additionalData.get('calibVersion')
-                calibDate      = additionalData.get('calibDate')
-            except:
-                pass
-            md.add(calibName.upper()+"_VERSION", calibVersion)
-            md.add(calibName.upper()+"_DATE", calibDate)
-            md.add(calibName.upper()+"_PATH", calibPath)
 
     def subset(self, datasetType, level=None, dataId={}, **rest):
         """Extracts a subset of a dataset collection.
