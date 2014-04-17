@@ -393,22 +393,28 @@ class Butler(object):
         trace.done()
 
     def _removeMetadata(self, obj):
-        haveMeta = hasattr(obj, "getMetadata")
-        if not haveMeta or obj.getMetadata() is None:
-            return
-        else:
+        """Remove specific k,v pairs which we recently added from metadata
+        """
+        try:
             md = obj.getMetadata()
-            md.remove("HSCPIPE_VERSION")
-            md.remove("HOST")
-            md.remove("USER")
-            md.remove("ROOT_PATH")
+        except AttributeError:
+            return
+        if md is None:
+            return
+        md.remove("HSCPIPE_VERSION")
+        md.remove("HOST")
+        md.remove("USER")
+        md.remove("ROOT_PATH")
 
     def _addMetadata(self, obj, dataId):
-
-        haveMeta = hasattr(obj, 'getMetadata')
-        if not haveMeta or obj.getMetadata() is None:
+        """Add some information to objects containing 'metadata'.
+        """
+        try:
+            md = obj.getMetadata()
+        except AttributeError:
             return
-        md = obj.getMetadata()
+        if md is None:
+            return
 
         # get the pipe version to stick in the header/metadata
         pipeVersion = "unknown"
