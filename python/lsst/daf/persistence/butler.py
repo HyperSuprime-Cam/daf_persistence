@@ -364,8 +364,10 @@ class Butler(object):
                         raise e
             flags = additionalData.getInt("flags", 0)
             self._addMetadata(obj, dataId)
-            obj.writeFits(logLoc.locString(), flags=flags)
-            self._removeMetadata(obj)
+            try:
+                obj.writeFits(logLoc.locString(), flags=flags)
+            finally:
+                self._removeMetadata(obj)
             trace.done()
             return
 
@@ -378,8 +380,10 @@ class Butler(object):
 
         if storageName == 'FitsStorage':
             self._addMetadata(obj, dataId)
-            self.persistence.persist(obj, storageList, additionalData)
-            self._removeMetadata(obj)
+            try:
+                self.persistence.persist(obj, storageList, additionalData)
+            finally:
+                self._removeMetadata(obj)
             trace.done()
             return
 
@@ -417,13 +421,12 @@ class Butler(object):
             return
 
         # get the pipe version to stick in the header/metadata
-        pipeVersion = "unknown"
         try:
             import hsc.pipe.tasks.version as hptv
             pipeVersion = hptv.__version__
-        except ImportError, e:
-            # Don't fail if hscPipe isn't set up.
-            pass
+        except ImportError:
+            pipeVersion = "unknown"
+
         md.add("HSCPIPE_VERSION", pipeVersion)
         md.add("HOST", socket.gethostname())
         md.add("USER", getpass.getuser())
