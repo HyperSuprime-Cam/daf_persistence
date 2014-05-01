@@ -29,4 +29,5 @@ from butlerSubset import *
 from butler import *
 from mapper import *
 from butlerFactory import *
+from eupsVersions import *
 from .version import *
