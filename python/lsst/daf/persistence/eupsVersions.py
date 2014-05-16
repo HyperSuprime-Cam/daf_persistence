@@ -61,7 +61,7 @@ class EupsVersions(object):
                         clean  = subprocess.check_output(gitdifCmd)
                         if len(clean.strip()) == 0:
                             clean = "clean-working-copy"
-                        gitinfo += clean
+                        gitinfo += " " + clean
                     except:
                         gitinfo = "no-git-info"
 
