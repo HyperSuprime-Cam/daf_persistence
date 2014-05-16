@@ -66,7 +66,7 @@ class EupsVersions(object):
                         gitinfo = "no-git-info"
 
                 if len(gitinfo.split()):
-                    info += " ".join(gitinfo.split())
+                    info = " ".join(gitinfo.split())
                 else:
                     info = p.dir
                         
