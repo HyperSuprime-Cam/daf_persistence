@@ -4,6 +4,7 @@ import os, re
 import eups
 import subprocess
 import difflib
+import tempfile
 
 class EupsVersions(object):
     """A class to contain EUPS version information.  The only purpose of this is to provide
@@ -90,11 +91,12 @@ class EupsVersions(object):
 
         @param versionFile   The filename to write to
         """
-        with open(versionFile, 'w') as fp:
+        d = os.path.split(versionFile)[0]
+        with tempfile.NamedTemporaryFile(delete=False, dir=d) as fp:
             for s in self.asList():
                 fp.write(s+"\n")
+            os.rename(fp.name, versionFile)
 
-            
     def diff(self, other):
         """Compare this EupsVersions to another one and return a diff-like string
 
