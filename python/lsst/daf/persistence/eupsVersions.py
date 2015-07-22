@@ -91,8 +91,12 @@ class EupsVersions(object):
         @param versionFile   The filename to write to
         """
         with open(versionFile, "w") as fp:
-            for s in self.asList():
-                fp.write(s+"\n")
+            self.writeToStream(fp)
+
+    def writeToStream(self, stream):
+        """Write the eups versions to a stream"""
+        for s in self.asList():
+            stream.write(s+"\n")
 
     def diff(self, other):
         """Compare this EupsVersions to another one and return a diff-like string
