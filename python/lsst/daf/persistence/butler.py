@@ -331,69 +331,64 @@ class Butler(object):
         storageName = location.getStorageName()
         locations = location.getLocations()
         # TODO support multiple output locations
-        locationString = locations[0]
-        logLoc = LogicalLocation(locationString, additionalData)
-        trace = pexLog.BlockTimingLog(self.log, "put",
-                                      pexLog.BlockTimingLog.INSTRUM+1)
-        trace.setUsageFlags(trace.ALLUDATA)
+        with SafeFilename(locations[0]) as locationString:
+            logLoc = LogicalLocation(locationString, additionalData)
+            trace = pexLog.BlockTimingLog(self.log, "put",
+                                          pexLog.BlockTimingLog.INSTRUM+1)
+            trace.setUsageFlags(trace.ALLUDATA)
 
-        if storageName == "PickleStorage":
+            if storageName == "PickleStorage":
+                trace.start("write to %s(%s)" % (storageName, logLoc.locString()))
+                with open(logLoc.locString(), "wb") as outfile:
+                    cPickle.dump(obj, outfile, cPickle.HIGHEST_PROTOCOL)
+                trace.done()
+                return
+
+            if storageName == "ConfigStorage":
+                trace.start("write to %s(%s)" % (storageName, logLoc.locString()))
+                obj.save(logLoc.locString())
+                trace.done()
+                return
+
+            if storageName == 'EupsStorage':
+                trace.start("write to %s(%s)" % (storageName, logLoc.locString()))
+                obj.write(logLoc.locString())
+                trace.done()
+                return
+
+            if storageName == "FitsCatalogStorage":
+                trace.start("write to %s(%s)" % (storageName, logLoc.locString()))
+                flags = additionalData.getInt("flags", 0)
+                self._addMetadata(obj, dataId)
+                try:
+                    obj.writeFits(logLoc.locString(), flags=flags)
+                finally:
+                    self._removeMetadata(obj)
+                trace.done()
+                return
+
+            # Create a list of Storages for the item.
+            storageList = StorageList()
+            storage = self.persistence.getPersistStorage(storageName, logLoc)
+            storageList.append(storage)
             trace.start("write to %s(%s)" % (storageName, logLoc.locString()))
-            with SafeFile(logLoc.locString()) as fp:
-                cPickle.dump(obj, fp, cPickle.HIGHEST_PROTOCOL)
-            trace.done()
-            return
 
-        if storageName == "ConfigStorage":
-            trace.start("write to %s(%s)" % (storageName, logLoc.locString()))
-            with SafeFile(logLoc.locString()) as fp:
-                obj.saveToStream(fp)
-            trace.done()
-            return
-
-        if storageName == 'EupsStorage':
-            trace.start("write to %s(%s)" % (storageName, logLoc.locString()))
-            with SafeFile(logLoc.locString()) as fp:
-                obj.writeToStream(fp)
-            trace.done()
-            return
-
-        if storageName == "FitsCatalogStorage":
-            trace.start("write to %s(%s)" % (storageName, logLoc.locString()))
-            flags = additionalData.getInt("flags", 0)
-            self._addMetadata(obj, dataId)
-            try:
-                with SafeFilename(logLoc.locString()) as temp:
-                    obj.writeFits(temp, flags=flags)
-            finally:
-                self._removeMetadata(obj)
-            trace.done()
-            return
-
-        # Create a list of Storages for the item.
-        storageList = StorageList()
-        storage = self.persistence.getPersistStorage(storageName, logLoc)
-        storageList.append(storage)
-        trace.start("write to %s(%s)" % (storageName, logLoc.locString()))
-
-        if storageName == 'FitsStorage':
-            self._addMetadata(obj, dataId)
-            try:
-                with SafeFilename(logLoc.locString()):
+            if storageName == 'FitsStorage':
+                self._addMetadata(obj, dataId)
+                try:
                     self.persistence.persist(obj, storageList, additionalData)
-            finally:
-                self._removeMetadata(obj)
-            trace.done()
-            return
+                finally:
+                    self._removeMetadata(obj)
+                trace.done()
+                return
 
-        with SafeFilename(logLoc.locString()):
             # Persist the item.
             if hasattr(obj, '__deref__'):
                 # We have a smart pointer, so dereference it.
                 self.persistence.persist(obj.__deref__(), storageList, additionalData)
             else:
                 self.persistence.persist(obj, storageList, additionalData)
-        trace.done()
+            trace.done()
 
     def _removeMetadata(self, obj):
         """Remove specific k,v pairs which we recently added from metadata
