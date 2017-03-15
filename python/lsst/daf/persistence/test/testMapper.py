@@ -1,8 +1,7 @@
 #!/usr/bin/env python
-
 #
 # LSST Data Management System
-# Copyright 2008, 2009, 2010 LSST Corporation.
+# Copyright 2017 LSST Corporation.
 #
 # This product includes software developed by the
 # LSST Project (http://www.lsst.org/).
@@ -22,20 +21,11 @@
 # see <http://www.lsstcorp.org/LegalNotices/>.
 #
 
-
-import os
-import lsst.daf.persistence as dafPersist
+from .. import Mapper
 
 
-class PickleMapper(dafPersist.Mapper):
+class EmptyTestMapper(Mapper):
+    """Class that can be used as a stub for a mapper."""
 
-    def __init__(self, root=None, outPath='', **kwargs):
-        self.root = root
-        self.outPath = outPath
-
-    def map_x(self, dataId, write):
-        path = "foo%(ccd)d.pickle" % dataId
-        path = os.path.join(self.root, self.outPath, path)
-        return dafPersist.ButlerLocation(
-            None, None, "PickleStorage", path, {}, self,
-            dafPersist.Storage.makeFromURI(os.getcwd()))
+    def __init__(self, root=None, parentRegistry=None, repositoryCfg=None):
+        pass
