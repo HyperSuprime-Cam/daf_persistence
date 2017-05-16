@@ -27,7 +27,8 @@
 import os
 import yaml
 
-from lsst.daf.persistence import listify, iterify, doImport, Storage
+from lsst.daf.persistence import listify, iterify, doImport
+from lsst.daf.persistence.storage import Storage
 from past.builtins import basestring
 
 
