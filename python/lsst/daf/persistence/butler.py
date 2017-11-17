@@ -1325,7 +1325,7 @@ class Butler(object):
                         try:
                             bypass = bypass()
                             location.bypass = bypass
-                        except:
+                        except Exception:
                             pass
                     # If a location was found but the location does not exist, keep looking in input
                     # repositories (the registry may have had enough data for a lookup even thought the object
